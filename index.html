@@ -12,63 +12,111 @@
       --text: #1E1E1E;
       --sub-text: #8E8E93;
       --border: #E5E5EA;
+      --danger: #FF3B30;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding-bottom: 80px; }
-    
-    header {
-      position: sticky; top: 0; background: var(--card-bg); padding: 16px; text-align: center;
-      font-weight: bold; font-size: 17px; border-bottom: 1px solid var(--border); z-index: 100;
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); padding: 16px; padding-bottom: 100px; }
+
+    .header-status { font-size: 13px; font-weight: 600; color: var(--sub-text); margin-bottom: 12px; padding-left: 4px; }
+
+    .item-container { display: flex; flex-direction: column; gap: 8px; }
+
+    /* スワイプ削除ラッパー */
+    .swipe-wrapper {
+      position: relative; overflow: hidden; border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
-    
-    .container { padding: 16px; max-width: 600px; margin: 0 auto; }
-    
-    .input-box { display: flex; gap: 8px; margin-bottom: 20px; }
-    .input-box input {
-      flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 24px;
-      font-size: 15px; outline: none; background: #FFF;
+    .swipe-action {
+      position: absolute; top: 0; right: 0; bottom: 0; width: 80px;
+      background-color: var(--danger); color: white; display: flex;
+      align-items: center; justify-content: center; font-weight: bold;
+      font-size: 14px; cursor: pointer;
     }
-    .input-box input:focus { border-color: var(--primary); }
-    .input-box button {
-      background: var(--primary); color: white; border: none; padding: 0 20px;
-      border-radius: 24px; font-weight: bold; font-size: 15px; cursor: pointer;
+    .item-card {
+      position: relative; background: var(--card-bg); padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 2; transition: transform 0.2s ease-out, opacity 0.2s;
+      touch-action: pan-y;
     }
 
-    .section-title { font-size: 13px; color: var(--sub-text); margin-bottom: 8px; padding-left: 4px; }
-    
-    .item-card {
-      background: var(--card-bg); border-radius: 12px; padding: 14px 16px;
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      transition: opacity 0.2s;
-    }
-    .item-left { display: flex; align-items: center; gap: 12px; }
+    .item-left { display: flex; align-items: center; gap: 12px; flex: 1; }
     .checkbox {
       width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
     }
-    .item-name { font-size: 16px; font-weight: 500; }
-    .loading, .empty { text-align: center; color: var(--sub-text); padding: 40px 0; font-size: 14px; }
+    .item-name { font-size: 16px; font-weight: 500; word-break: break-all; }
+    
+    .edit-btn {
+      background: none; border: none; font-size: 16px; color: var(--sub-text);
+      padding: 4px 8px; cursor: pointer; flex-shrink: 0;
+    }
+
+    /* 編集入力モード */
+    .edit-input {
+      font-size: 16px; padding: 4px 8px; border: 1px solid var(--primary);
+      border-radius: 6px; outline: none; width: 80%;
+    }
+
+    /* フローティング「＋」ボタン */
+    .fab {
+      position: fixed; right: 20px; bottom: 24px; width: 56px; height: 56px;
+      background: var(--primary); color: white; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; box-shadow: 0 4px 12px rgba(6, 199, 85, 0.4);
+      cursor: pointer; z-index: 100; border: none;
+    }
+
+    /* モーダルダイアログ */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4); display: none; align-items: center;
+      justify-content: center; z-index: 200; padding: 20px;
+    }
+    .modal {
+      background: white; border-radius: 16px; padding: 20px; width: 100%;
+      max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    .modal h3 { font-size: 16px; margin-bottom: 12px; text-align: center; }
+    .modal textarea {
+      width: 100%; height: 90px; border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px; font-size: 15px; outline: none; resize: none; margin-bottom: 12px;
+    }
+    .modal textarea:focus { border-color: var(--primary); }
+    .modal-actions { display: flex; gap: 8px; }
+    .modal-btn {
+      flex: 1; padding: 10px; border: none; border-radius: 8px;
+      font-size: 14px; font-weight: bold; cursor: pointer;
+    }
+    .btn-cancel { background: var(--bg); color: var(--sub-text); }
+    .btn-add { background: var(--primary); color: white; }
+
+    .loading, .empty { text-align: center; color: var(--sub-text); padding: 60px 0; font-size: 14px; }
   </style>
 </head>
 <body>
 
-  <header>🛒 買い物メモ</header>
+  <div class="header-status" id="headerStatus">未購入 (0)</div>
+  <div class="item-container" id="itemList">
+    <div class="loading">読み込み中...</div>
+  </div>
 
-  <div class="container">
-    <div class="input-box">
-      <input type="text" id="newItemInput" placeholder="買うものを入力..." onkeypress="if(event.key==='Enter') handleAdd()">
-      <button onclick="handleAdd()">追加</button>
-    </div>
+  <!-- フローティング追加ボタン -->
+  <button class="fab" onclick="openModal()">＋</button>
 
-    <div class="section-title">未購入のリスト</div>
-    <div id="itemList">
-      <div class="loading">読み込み中...</div>
+  <!-- 追加用モーダル -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3>買い物メモを追加</h3>
+      <textarea id="modalInput" placeholder="買うものを入力...&#10;(改行で複数追加できます)"></textarea>
+      <div class="modal-actions">
+        <button class="modal-btn btn-cancel" onclick="closeModal()">キャンセル</button>
+        <button class="modal-btn btn-add" onclick="submitAdd()">追加</button>
+      </div>
     </div>
   </div>
 
   <script>
-    // ⚠️ ここをご自身のGAS WebアプリURLに変更してください
+    // ⚠️ ご自身のGAS WebアプリURLを設定してください
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxJFn6PQX5syNU1HVR__ZI6zBCwhWDV7ZjhtjBwHrU_XZgGs9t6glNAzPIJqhbnQJx0/exec';
 
     window.onload = function() {
@@ -90,36 +138,57 @@
 
     function renderItems(items) {
       const listDiv = document.getElementById('itemList');
+      const statusDiv = document.getElementById('headerStatus');
+
       if (!items || !Array.isArray(items) || items.length === 0) {
+        statusDiv.innerText = '未購入 (0)';
         listDiv.innerHTML = '<div class="empty">買うものはすべて揃っています！🎉</div>';
         return;
       }
 
+      statusDiv.innerText = `未購入 (${items.length})`;
       let html = '';
+
       items.forEach(function(item) {
         html += `
-          <div class="item-card" id="card-${item.id}">
-            <div class="item-left">
-              <div class="checkbox" onclick="handleComplete('${item.id}')"></div>
-              <span class="item-name">${escapeHtml(item.item)}</span>
+          <div class="swipe-wrapper" id="wrapper-${item.id}">
+            <div class="swipe-action" onclick="handleDelete('${item.id}')">削除</div>
+            <div class="item-card" id="card-${item.id}">
+              <div class="item-left">
+                <div class="checkbox" onclick="handleComplete('${item.id}')"></div>
+                <span class="item-name" id="name-${item.id}">${escapeHtml(item.item)}</span>
+              </div>
+              <button class="edit-btn" id="editBtn-${item.id}" onclick="startEdit('${item.id}')">✏️</button>
             </div>
           </div>
         `;
       });
+
       listDiv.innerHTML = html;
+      setupSwipeEvents();
     }
 
-    function handleAdd() {
-      const input = document.getElementById('newItemInput');
-      const text = input.value.trim();
+    /* モーダル操作 */
+    function openModal() {
+      document.getElementById('modalOverlay').style.display = 'flex';
+      document.getElementById('modalInput').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').style.display = 'none';
+      document.getElementById('modalInput').value = '';
+    }
+
+    function submitAdd() {
+      const text = document.getElementById('modalInput').value.trim();
       if (!text) return;
 
-      input.value = '';
+      closeModal();
       document.getElementById('itemList').innerHTML = '<div class="loading">追加中...</div>';
 
       fetch(GAS_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' }, // GASのCORS回避
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ action: 'add', item: text, userName: 'LIFF' })
       })
       .then(res => res.json())
@@ -127,6 +196,7 @@
       .catch(handleError);
     }
 
+    /* 完了操作 */
     function handleComplete(id) {
       const card = document.getElementById(`card-${id}`);
       if (card) card.style.opacity = '0.3';
@@ -139,6 +209,84 @@
       .then(res => res.json())
       .then(() => loadItems())
       .catch(handleError);
+    }
+
+    /* インライン編集操作 */
+    function startEdit(id) {
+      const nameSpan = document.getElementById(`name-${id}`);
+      const currentText = nameSpan.innerText;
+      const editBtn = document.getElementById(`editBtn-${id}`);
+
+      nameSpan.innerHTML = `<input type="text" class="edit-input" id="input-${id}" value="${escapeHtml(currentText)}">`;
+      editBtn.innerText = '💾';
+      editBtn.onclick = function() { saveEdit(id); };
+
+      const input = document.getElementById(`input-${id}`);
+      input.focus();
+      input.onkeypress = function(e) { if (e.key === 'Enter') saveEdit(id); };
+    }
+
+    function saveEdit(id) {
+      const input = document.getElementById(`input-${id}`);
+      const newText = input.value.trim();
+      if (!newText) return;
+
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'update', id: id, item: newText })
+      })
+      .then(res => res.json())
+      .then(() => loadItems())
+      .catch(handleError);
+    }
+
+    /* 削除操作 */
+    function handleDelete(id) {
+      const wrapper = document.getElementById(`wrapper-${id}`);
+      if (wrapper) wrapper.style.display = 'none';
+
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'delete', id: id })
+      })
+      .then(res => res.json())
+      .then(() => loadItems())
+      .catch(handleError);
+    }
+
+    /* スワイプイベント実装 */
+    function setupSwipeEvents() {
+      const cards = document.querySelectorAll('.item-card');
+      cards.forEach(card => {
+        let startX = 0;
+        let currentX = 0;
+
+        card.addEventListener('touchstart', e => {
+          startX = e.touches[0].clientX;
+        }, { passive: true });
+
+        card.addEventListener('touchmove', e => {
+          currentX = e.touches[0].clientX;
+          const diffX = currentX - startX;
+          // 左スワイプ時のみ移動 (最大80px)
+          if (diffX < 0 && diffX > -100) {
+            card.style.transform = `translateX(${diffX}px)`;
+          }
+        }, { passive: true });
+
+        card.addEventListener('touchend', () => {
+          const diffX = currentX - startX;
+          if (diffX < -40) {
+            card.style.transform = 'translateX(-80px)'; // 削除ボタン表示位置に固定
+          } else {
+            card.style.transform = 'translateX(0px)'; // 元に戻す
+          }
+          startX = 0;
+          currentX = 0;
+        });
+      });
     }
 
     function handleError(err) {
