@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>買い物メモ</title>
+  <!-- LIFF SDK を読み込み -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     :root {
       --primary: #06C755;
@@ -51,13 +53,11 @@
       padding: 4px 8px; cursor: pointer; flex-shrink: 0;
     }
 
-    /* 編集入力モード */
     .edit-input {
       font-size: 16px; padding: 4px 8px; border: 1px solid var(--primary);
       border-radius: 6px; outline: none; width: 80%;
     }
 
-    /* フローティング「＋」ボタン */
     .fab {
       position: fixed; right: 20px; bottom: 24px; width: 56px; height: 56px;
       background: var(--primary); color: white; border-radius: 50%;
@@ -66,7 +66,6 @@
       cursor: pointer; z-index: 100; border: none;
     }
 
-    /* モーダルダイアログ */
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.4); display: none; align-items: center;
@@ -91,6 +90,7 @@
     .btn-add { background: var(--primary); color: white; }
 
     .loading, .empty { text-align: center; color: var(--sub-text); padding: 60px 0; font-size: 14px; }
+    .reload-btn { margin-top: 10px; padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 20px; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -100,10 +100,8 @@
     <div class="loading">読み込み中...</div>
   </div>
 
-  <!-- フローティング追加ボタン -->
   <button class="fab" onclick="openModal()">＋</button>
 
-  <!-- 追加用モーダル -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
       <h3>買い物メモを追加</h3>
@@ -119,21 +117,50 @@
     // ⚠️ ご自身のGAS WebアプリURLを設定してください
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxJFn6PQX5syNU1HVR__ZI6zBCwhWDV7ZjhtjBwHrU_XZgGs9t6glNAzPIJqhbnQJx0/exec';
 
-    window.onload = function() {
+    let isLoading = false;
+
+    // LIFF初期化と自動読み込み
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.liff) {
+        liff.init({ liffId: "YOUR_LIFF_ID" }).catch(err => console.log(err));
+      }
       loadItems();
-    };
+    });
+
+    // 画面再表示（フォーカス復帰）時の自動再読み込み
+    window.addEventListener('pageshow', function() {
+      loadItems();
+    });
+
+    function fetchWithTimeout(url, options = {}, timeout = 8000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      return fetch(url, { ...options, signal: controller.signal })
+        .finally(() => clearTimeout(id));
+    }
 
     function loadItems() {
-      fetch(GAS_API_URL)
+      if (isLoading) return;
+      isLoading = true;
+
+      // キャッシュ回避用タイムスタンプ
+      const cacheBuster = `_t=${Date.now()}`;
+      const url = GAS_API_URL.includes('?') ? `${GAS_API_URL}&${cacheBuster}` : `${GAS_API_URL}?${cacheBuster}`;
+
+      fetchWithTimeout(url, { method: 'GET' }, 8000)
         .then(res => res.json())
         .then(res => {
+          isLoading = false;
           if (res.status === 'success') {
             renderItems(res.data);
           } else {
             handleError(res.message);
           }
         })
-        .catch(handleError);
+        .catch(err => {
+          isLoading = false;
+          handleError(err);
+        });
     }
 
     function renderItems(items) {
@@ -168,7 +195,6 @@
       setupSwipeEvents();
     }
 
-    /* モーダル操作 */
     function openModal() {
       document.getElementById('modalOverlay').style.display = 'flex';
       document.getElementById('modalInput').focus();
@@ -186,32 +212,30 @@
       closeModal();
       document.getElementById('itemList').innerHTML = '<div class="loading">追加中...</div>';
 
-      fetch(GAS_API_URL, {
+      fetchWithTimeout(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ action: 'add', item: text, userName: 'LIFF' })
-      })
+      }, 10000)
       .then(res => res.json())
       .then(() => loadItems())
       .catch(handleError);
     }
 
-    /* 完了操作 */
     function handleComplete(id) {
       const card = document.getElementById(`card-${id}`);
       if (card) card.style.opacity = '0.3';
 
-      fetch(GAS_API_URL, {
+      fetchWithTimeout(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ action: 'complete', id: id })
-      })
+      }, 10000)
       .then(res => res.json())
       .then(() => loadItems())
       .catch(handleError);
     }
 
-    /* インライン編集操作 */
     function startEdit(id) {
       const nameSpan = document.getElementById(`name-${id}`);
       const currentText = nameSpan.innerText;
@@ -231,32 +255,30 @@
       const newText = input.value.trim();
       if (!newText) return;
 
-      fetch(GAS_API_URL, {
+      fetchWithTimeout(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ action: 'update', id: id, item: newText })
-      })
+      }, 10000)
       .then(res => res.json())
       .then(() => loadItems())
       .catch(handleError);
     }
 
-    /* 削除操作 */
     function handleDelete(id) {
       const wrapper = document.getElementById(`wrapper-${id}`);
       if (wrapper) wrapper.style.display = 'none';
 
-      fetch(GAS_API_URL, {
+      fetchWithTimeout(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ action: 'delete', id: id })
-      })
+      }, 10000)
       .then(res => res.json())
       .then(() => loadItems())
       .catch(handleError);
     }
 
-    /* スワイプイベント実装 */
     function setupSwipeEvents() {
       const cards = document.querySelectorAll('.item-card');
       cards.forEach(card => {
@@ -270,7 +292,6 @@
         card.addEventListener('touchmove', e => {
           currentX = e.touches[0].clientX;
           const diffX = currentX - startX;
-          // 左スワイプ時のみ移動 (最大80px)
           if (diffX < 0 && diffX > -100) {
             card.style.transform = `translateX(${diffX}px)`;
           }
@@ -279,9 +300,9 @@
         card.addEventListener('touchend', () => {
           const diffX = currentX - startX;
           if (diffX < -40) {
-            card.style.transform = 'translateX(-80px)'; // 削除ボタン表示位置に固定
+            card.style.transform = 'translateX(-80px)';
           } else {
-            card.style.transform = 'translateX(0px)'; // 元に戻す
+            card.style.transform = 'translateX(0px)';
           }
           startX = 0;
           currentX = 0;
@@ -290,8 +311,13 @@
     }
 
     function handleError(err) {
-      alert('通信エラーが発生しました');
-      loadItems();
+      const listDiv = document.getElementById('itemList');
+      listDiv.innerHTML = `
+        <div class="empty">
+          通信に失敗しました<br>
+          <button class="reload-btn" onclick="loadItems()">再読み込み</button>
+        </div>
+      `;
     }
 
     function escapeHtml(str) {
